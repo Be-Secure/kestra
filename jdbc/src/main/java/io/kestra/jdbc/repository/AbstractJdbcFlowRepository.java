@@ -23,8 +23,8 @@ import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.data.model.Pageable;
 import io.micronaut.inject.qualifiers.Qualifiers;
-import jakarta.inject.Singleton;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.Record;
 import org.jooq.*;
 import org.jooq.impl.DSL;
@@ -33,7 +33,7 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.ConstraintViolationException;
 import java.util.*;
 
-@Singleton
+@Slf4j
 public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository implements FlowRepositoryInterface {
     private final QueueInterface<Flow> flowQueue;
     private final QueueInterface<Trigger> triggerQueue;
@@ -200,7 +200,20 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
                     .from(fromLastRevision(true))
                     .where(this.defaultFilter());
 
-                return this.jdbcRepository.fetch(select);
+                // findAllForAllTenants() is used in the backend so we want it to work even if messy plugin exist
+                // that's why we will try to deserialize each flow and log an error but not crash in case it's not possible
+                List<Flow> flows = new ArrayList<>();
+                select.fetch().forEach(
+                    record -> {
+                        try {
+                            Flow flow = this.jdbcRepository.map(record);
+                            flows.add(flow);
+                        } catch (Throwable e) {
+                            log.error("Unable to load the flow following flow:\n{}", record.get("value", String.class), e);
+                        }
+                    }
+                );
+                return flows;
             });
     }
 
