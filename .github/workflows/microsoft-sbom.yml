@@ -22,7 +22,7 @@ jobs:
     - name: Generate SBOM
       run: |
         mkdir SBOMOUTPUT
-        $RUNNER_TEMP/sbom-tool generate -b SBOMOUTPUT/ -bc . -pn ${{ github.repository }} -pv <version> -ps wipro -nsb <github_main_url>
+        $RUNNER_TEMP/sbom-tool generate -b SBOMOUTPUT/ -bc . -pn ${{ github.repository }} -pv v0.15.2 -ps wipro -nsb https://github.com/kestra-io/kestra
     
     - name: Upload SBOM artifact
       uses: actions/upload-artifact@v3
